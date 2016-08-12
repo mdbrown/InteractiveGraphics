@@ -4,13 +4,56 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <title>Interactivegraphics by mdbrown</title>
-
+    <script type="text/javascript" src="../d3/d3.v3.js"></script>
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/github-light.css">
     <meta name="viewport" content="width=device-width">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+    
+    <style type="text/css">
+         text {
+            font-family: sans-serif;
+         }
+         
+         .axis path,
+			.axis line {
+				fill: none;
+				stroke: grey;
+				shape-rendering: crispEdges;
+			}
+			
+			.axis text {
+				font-size: 11px;
+			}
+         
+         #button {
+            cursor: pointer;
+         }
+         
+         #button rect {
+            height: 30px;
+            width: 110px;
+            fill: white;
+            stroke: grey;
+         }
+         
+         #button text {
+            font-size: 18px;
+         }
+         
+         .info rect {
+            height: 50px;
+            width: 150px;
+            fill: white;
+            stroke: pink;
+         }
+         
+         .info text {
+            font-size: 15px;
+         }
+      </style>
   </head>
   <body>
     <div class="wrapper">
@@ -33,26 +76,211 @@
 
 <p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here <a href="https://guides.github.com/features/mastering-markdown/">using GitHub Flavored Markdown</a>, select a template crafted by a designer, and publish. After your page is generated, you can check out the new <code>gh-pages</code> branch locally. If you’re using GitHub Desktop, simply sync your repository and you’ll see the new branch.</p>
 
-<h3>
-<a id="designer-templates" class="anchor" href="#designer-templates" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Designer Templates</h3>
 
-<p>We’ve crafted some handsome templates for you to use. Go ahead and click 'Continue to layouts' to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved.</p>
-
-<h3>
-<a id="creating-pages-manually" class="anchor" href="#creating-pages-manually" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Creating pages manually</h3>
-
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
-
-<h3>
-<a id="authors-and-contributors" class="anchor" href="#authors-and-contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Authors and Contributors</h3>
-
-<p>You can @mention a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor’s GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
-
-<h3>
-<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Support or Contact</h3>
-
-<p>Having trouble with Pages? Check out our <a href="https://help.github.com/pages">documentation</a> or <a href="https://github.com/contact">contact support</a> and we’ll help you sort it out.</p>
-      </section>
+ <script type="text/javascript">
+         var risk = [];
+         var people = 100;
+         var cancerNumber = 32;
+         var rows = 10;
+         var cols = 10;
+         
+         for (var i = 0; i < people; i++) {
+         	if(i < cancerNumber){
+         		risk.push(Math.random());
+         	}else{
+         		risk.push(Math.random() + .1)
+         	}
+         	
+         };
+         
+         var w = 1000;
+         var h = 500;
+         var padding = 10;
+         
+         var svg = d3.select("body")
+                     .append("svg")
+                     .attr("width", w)
+                     .attr("height", h);
+                     
+         var xScaleRandom = d3.scale.ordinal()
+                                    .domain(d3.range(cols))
+                                    .rangeRoundBands([padding, w - padding]);             
+         var xScaleRank = d3.scale.linear()
+                              .domain([0, 1])
+                              .range([padding, w - padding]);
+                     
+         svg.selectAll("circle")
+            .data(risk)
+            .enter()
+            .append("circle")
+            .attr("cx", function(d) {
+               return xScaleRandom(d);
+            })
+            .attr("cy", function(d, i) {
+               var nearest = Math.ceil((i + 1)/ cols);  //Indexing starts from 0 ya dingus
+               return nearest * ((h - padding) / rows);
+            })
+            .attr("r", 7)
+            .attr("fill", function(d, i) {
+               if (i < cancerNumber) {
+                  return "crimson";
+               }
+               else {
+                  return "lightblue";
+               }
+            });
+            
+         var button = svg.append("g")
+                         .attr("id", "button");                 
+         button.append("rect")
+               .attr("x", padding)
+               .attr("y", 0);   
+         button.append("text")
+               .text("Sort by risk")
+               .attr("x", padding + 55)
+               .attr("y", 20)
+               .attr("text-anchor", "middle");
+            
+         var xAxis = d3.svg.axis()
+                           .scale(xScaleRank);
+         
+         svg.append("g")
+            .call(xAxis)
+            .attr("transform", "translate (0, " + (h / 2 + padding) + ")")
+            .attr("class", "axis")
+            .style("opacity", 0);
+                  
+         var stacks = [];
+         
+         for (var j = 0; j < people; j++) {
+            var round1 = Math.round(risk[j] / 0.025);
+            stacks.push(0);
+            for (var jj = j - 1; jj >= 0; jj--) {
+               var round2 = Math.round(risk[jj] / 0.025);
+               if (round1 == round2) {
+                  stacks[j] = stacks[jj] + 1;
+                  break;
+               }
+            }
+         }
+         
+         svg.append("rect")
+            .attr("id", "mover");
+         
+         d3.select("#button")
+            .on("click", function() {
+               svg.select("#button")
+                  .remove();
+               
+               svg.select(".axis")
+                  .transition()
+                  .duration(1000)
+                  .style("opacity", 1);
+                  
+               svg.selectAll("circle")
+                  .transition()
+                  .duration(2000)
+                  .attr("cx", function(d) {
+                     return xScaleRank(Math.round(d / 0.025) * 0.025);
+                  })
+                  .attr("cy", function(d, i) {
+                     return (h / 2) - (stacks[i] * 20);
+                  });
+                  
+               svg.on("mousemove", function() {
+                  var mouseX = d3.event.x;
+                  svg.select("rect#mover")
+                     .attr("x", mouseX)
+                     .attr("y", 0)
+                     .attr("width", w - mouseX)
+                     .attr("height", h / 2 + 10)
+                     .attr("fill", "pink")
+                     .style("opacity", 0.3);
+                     
+               var truePos = 0;
+               var falsePos = 0;
+                     
+               for (var k = 0; k < people; k++) {
+                  if (xScaleRank(Math.round(risk[k] / 0.025)) * 0.025 >= mouseX) {
+                     if (k < cancerNumber) {
+                        truePos++;
+                     }
+                     else {
+                        falsePos++;
+                     }
+                  }
+               };
+               
+               var trueNeg = people - cancerNumber - falsePos;
+               var falseNeg = cancerNumber - truePos;
+               
+               var sensitivity = svg.append("g")
+                             .attr("class", "info");
+               sensitivity.append("text")
+                   .text("Sensitivity")
+                   .attr("x", padding + 75)
+                   .attr("y", 0.65 * h - 15)
+                   .attr("text-anchor", "middle");
+               sensitivity.append("rect")
+                   .attr("x", padding)
+                   .attr("y", 0.65 * h);
+               sensitivity.append("text")
+                   .text(Math.round(truePos / cancerNumber * 100) + "%")
+                   .attr("x", padding + 75)
+                   .attr("y", 0.65 * h + 30)
+                   .attr("text-anchor", "middle");
+               
+               var specificity = svg.append("g")
+                             .attr("class", "info");
+               specificity.append("text")
+                   .text("Specificity")
+                   .attr("x", padding + 150 + padding + 75)
+                   .attr("y", 0.65 * h - 15)
+                   .attr("text-anchor", "middle");
+               specificity.append("rect")
+                   .attr("x", padding + 150 + padding)
+                   .attr("y", 0.65 * h);
+               specificity.append("text")
+                   .text(Math.round(trueNeg / (people - cancerNumber) * 100) + "%")
+                   .attr("x", padding + 150 + padding + 75)
+                   .attr("y", 0.65 * h + 30)
+                   .attr("text-anchor", "middle");
+                   
+               var ppv = svg.append("g")
+                             .attr("class", "info");
+               ppv.append("text")
+                   .text("PPV")
+                   .attr("x", padding + 75)
+                   .attr("y", 0.85 * h - 15)
+                   .attr("text-anchor", "middle");
+               ppv.append("rect")
+                   .attr("x", padding)
+                   .attr("y", 0.85 * h);
+               ppv.append("text")
+                   .text(Math.round(truePos / (truePos + falsePos) * 100) + "%")
+                   .attr("x", padding + 75)
+                   .attr("y", 0.85 * h + 30)
+                   .attr("text-anchor", "middle"); 
+                   
+               var npv = svg.append("g")
+                             .attr("class", "info");
+               npv.append("text")
+                   .text("NPV")
+                   .attr("x", padding + 150 + padding + 75)
+                   .attr("y", 0.85 * h - 15)
+                   .attr("text-anchor", "middle");
+               npv.append("rect")
+                   .attr("x", padding + 150 + padding)
+                   .attr("y", 0.85 * h);
+               npv.append("text")
+                   .text(Math.round(trueNeg / (trueNeg + falseNeg) * 100) + "%")
+                   .attr("x", padding + 150 + padding + 75)
+                   .attr("y", 0.85 * h + 30)
+                   .attr("text-anchor", "middle");
+               });
+            }); 
+      </script>
+           </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/mdbrown">mdbrown</a></p>
         <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
