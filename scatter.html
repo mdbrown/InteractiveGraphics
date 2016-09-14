@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="utf-8">
+      <title>Scatter</title>
+      <script type="text/javascript" src="d3/d3.v3.js"></script>
+      <style type="text/css">
+         .invisible {
+            opacity: 0;
+         }
+
+         .visible {
+            opacity: 1;
+         }
+
+         text {
+            font-family: sans-serif;
+            text-anchor: middle;
+            alignment-baseline: middle;
+         }
+
+         .axis path,
+  			 .axis line {
+  				 fill: none;
+  				 stroke: grey;
+  				 shape-rendering: crispEdges;
+  			 }
+
+    			.axis text {
+    				font-size: 11px;
+    			}
+
+         line {
+  				fill: none;
+  				stroke: grey;
+  				shape-rendering: crispEdges;
+			   }
+
+         .button {            /*the "Sort" and toggle buttons*/
+            cursor: pointer;
+         }
+
+         .button rect {
+            stroke: grey;
+         }
+
+         .button text {
+            font-size: 18px;
+         }
+
+         .info rect {       /*the boxes with numerical data*/
+            fill: white;
+            stroke: pink;
+         }
+
+         .info text {
+            font-size: 15px;
+         }
+
+         #oval {            /*the slider*/
+            cursor: pointer;
+         }
+      </style>
+   </head>
+   <body>
+      <script type="text/javascript">
+         var people = 100;
+         var model1 = [];   //two risk models
+         var model2 = [];
+         var cancerRisk = 0.3; //randomizes whether or not a person has cancer
+                              //won't be necessary with real data
+         var cancerNumber = 0;
+
+         for (var i = 0; i < people; i++) {
+            var new1 = []; //every person has array
+            var new2 = [];
+
+            new1.push(Math.random()); //first index is randomized risk
+            new2.push(Math.random());
+            if (Math.random() <= cancerRisk) {
+              new1.push(1); //second index is randomized disease status
+              new2.push(1);
+              cancerNumber++;
+            }
+            else {
+              new1.push(0);
+              new2.push(0);
+            }
+
+            model1.push(new1);
+            model2.push(new2);
+         }
+
+         var w = 600;   //dimensions of svg
+         var h = 600;
+         var padding = 10;
+         var graphSpace = 350;  //space for the graphs and boxes
+         var boxSpace = 150;
+         var rows = 10;
+         var cols = 10;
+
+         var svg = d3.select("body")
+                     .append("svg")
+                     .attr("width", w + graphSpace)
+                     .attr("height", h + boxSpace);
+
+         var plot = svg.append("g")
+
+         var columns = d3.scale.ordinal()
+                                    .domain(d3.range(cols))
+                                    .rangeRoundBands([padding, w - padding]); //to create dot grid
+
+         plot.selectAll("circle.visible") //first (blue) model
+            .data(model1)
+            .enter()
+            .append("circle")
+            .attr("cx", function(d) {
+               return columns(d[0]);
+            })
+            .attr("cy", function(d, i) {
+               var nearest = Math.ceil((i + 1)/ cols);  //indexing starts from 0 ya dingus
+               return nearest * ((h - padding) / rows);
+            })
+            .attr("r", 7)
+            .attr("fill", "lightblue")
+            .attr("class", function(d) {
+               if (d[1] == 1) {   //does person have cancer?
+                  return "cancer visible";
+               }
+               else {
+                  return "healthy visible";
+               }
+            });
+
+         plot.selectAll("circle.invisible") //second (red) model - also invisible
+             .data(model2)
+             .enter()
+             .append("circle")
+             .attr("cx", function(d) {
+               return columns(d[0]);
+             })
+             .attr("cy", function(d, i) {
+               var nearest = Math.ceil((i + 1) / cols);
+               return nearest * ((h - padding) / rows);
+             })
+             .attr("r", 7)
+             .attr("fill", "crimson")
+             .attr("class", function(d) {
+               if (d[1] == 1) {
+                  return "cancer invisible";
+               }
+               else {
+                  return "healthy invisible";
+               }
+             });
+
+         var buttonWidth = 100;  //standardizing here instead of in css
+         var buttonHeight = 30;  //so that I can properly scale text placement
+
+         var sortButton = svg.append("g")
+                         .attr("class", "button");
+         sortButton.append("rect")
+               .attr("x", padding)
+               .attr("y", 0)
+               .attr("width", buttonWidth)
+               .attr("height", buttonHeight)
+               .attr("fill", "white");
+         sortButton.append("text")
+               .text("Sort")
+               .attr("x", padding + 0.5 * buttonWidth)
+               .attr("y", 0.5 * buttonHeight);
+
+          sortButton.on("click", function() {
+                  d3.select(this)
+                     .remove();
+
+                  var dataButton = svg.append("g")
+                                      .attr("class", "button");
+                  dataButton.append("rect")
+                            .attr("x", w + padding)
+                            .attr("y", 0)
+                            .attr("width", buttonWidth)
+                            .attr("height", buttonHeight)
+                            .attr("fill", "white");
+                  dataButton.append("text")
+                            .text("1")
+                            .attr("x", w + padding + 0.25 * buttonWidth)
+                            .attr("y", 0.5 * buttonHeight);
+                  dataButton.append("text")
+                            .text("2")
+                            .attr("x", w + padding + 0.75 * buttonWidth)
+                            .attr("y", 0.5 * buttonHeight);
+                  dataButton.append("rect")     //to toggle between models
+                            .attr("x", w + padding + 0.5 * buttonWidth)
+                            .attr("y", 0)
+                            .attr("width", 0.5 * buttonWidth)
+                            .attr("height", buttonHeight)
+                            .attr("fill", "grey")
+                            .attr("id", "toggler");
+
+                 var standard = 0.15; //default threshold
+
+                 plot.selectAll("circle")
+                      .transition()
+                      .duration(2000)
+                      .attr("cx", function(d) {
+                          if (d[1] == 1) { //if person has cancer
+                             return Math.random() * (w / 4) + (5/8 * w); //puts them in quadrants
+                          }
+                          else {
+                             return Math.random() * (w / 4) + (w / 8);
+                          }
+                       })
+                       .attr("cy", function(d) {
+                          if (d[0] < standard) {
+                             return Math.random() * (h / 4) + (5/8 * h);
+                          }
+                          else {
+                             return Math.random() * (h / 4) + (h / 8);
+                          }
+                       });
+
+                  plot.append("line")
+                      .attr("x1", padding)
+                      .attr("y1", h / 2)
+                      .attr("x2", w - padding)
+                      .attr("y2", h / 2);
+                  plot.append("line")
+                      .attr("x1", w / 2)
+                      .attr("y1", padding)
+                      .attr("x2", w / 2)
+                      .attr("y2", h - padding);
+                  plot.append("text")
+                      .text("D = 0")
+                      .attr("x", padding * 4)
+                      .attr("y", padding * 2);
+                  plot.append("text")
+                      .text("D = 1")
+                      .attr("x", w / 2 + padding * 4)
+                      .attr("y", padding * 2);
+                  plot.append("text")
+                      .text("R > C")
+                      .attr("transform", "translate(" + (padding * 2) + ", " + (h / 2 - padding * 4) + ")rotate(-90)");
+                      //haha transforming is a pain
+                  plot.append("text")
+                      .text("R < C")
+                      .attr("transform", "translate(" + (padding * 2) + ", " + (h - padding * 4) + ")rotate(-90)");
+
+                  var findSensAndSpec = function(aThreshold) {
+                        //an unfortunately redundant function created solely for the ROC curves
+                        //finds sensitivity and specificity
+                         var theArray = new Array(2)
+
+                         var truePos = 0;
+                         var falseNeg = 0;
+
+                         plot.selectAll("circle.cancer")
+                             .filter(".visible")
+                             .each(function(d) {
+                                 if (d[0] >= aThreshold) {
+                                    truePos++;
+                                 }
+                                 else {
+                                    falseNeg++;
+                                 }
+                              });
+
+                         var falsePos = 0;
+                         var trueNeg = 0;
+
+                         plot.selectAll("circle.healthy")
+                             .filter(".visible")
+                             .each(function(d) {
+                                if (d[0] >= aThreshold) {
+                                   falsePos++;
+                                }
+                                else {
+                                   trueNeg++;
+                                }
+                             });
+
+                         theArray[0] = truePos / cancerNumber;
+                         theArray[1] = trueNeg / (people - cancerNumber);
+                         return theArray;
+                      }
+
+                      var truePos = 0;      //here are the calculations again
+                      var falseNeg = 0;     //this time for the main event
+
+                      plot.selectAll("circle.cancer")
+                          .filter(".visible")
+                          .each(function(d) {
+                             if (d[0] >= standard) {
+                                 truePos++;
+                             }
+                             else {
+                                 falseNeg++;
+                             }
+                           });
+
+                      var falsePos = 0;
+                      var trueNeg = 0;
+
+                      plot.selectAll("circle.healthy")
+                          .filter(".visible")
+                          .each(function(d) {
+                             if (d[0] >= standard) {
+                                 falsePos++;
+                             }
+                             else {
+                                 trueNeg++;
+                             }
+                           });
+
+                       var boxWidth = 0.25 * (w - 5 * padding);
+                       var boxHeight = 50;
+
+                       var sensitivity = svg.append("g")
+                                            .attr("class", "info");
+                       sensitivity.append("text")
+                                .text("Sensitivity")
+                                .attr("x", padding + 0.5 * boxWidth)
+                                .attr("y", h + 0.4 * boxSpace);
+                       sensitivity.append("rect")
+                                .attr("x", padding)
+                                .attr("y", h + 0.5 * boxSpace)
+                                .attr("width", boxWidth)
+                                .attr("height", boxHeight);
+                       sensitivity.append("text")
+                                .text(Math.round(truePos / cancerNumber * 100) + "%")
+                                .attr("x", padding + 0.5 * boxWidth)
+                                .attr("y", h + 0.5 * boxSpace + 0.5 * boxHeight)
+                                .attr("class", "stat");
+
+                       var specificity = svg.append("g")
+                                            .attr("class", "info");
+                       specificity.append("text")
+                                .text("Specificity")
+                                .attr("x", padding * 2 + boxWidth + 0.5 * boxWidth)
+                                .attr("y", h + 0.4 * boxSpace);
+                       specificity.append("rect")
+                                .attr("x", padding * 2 + boxWidth)
+                                .attr("y", h + 0.5 * boxSpace)
+                                .attr("width", boxWidth)
+                                .attr("height", boxHeight);
+                       specificity.append("text")
+                                .text(Math.round(trueNeg / (people - cancerNumber) * 100) + "%")
+                                .attr("x", padding * 2 + boxWidth + 0.5 * boxWidth)
+                                .attr("y", h + 0.5 * boxSpace + 0.5 * boxHeight)
+                                .attr("class", "stat");
+
+                       var ppv = svg.append("g")
+                                         .attr("class", "info");
+                       ppv.append("text")
+                                .text("PPV")
+                                .attr("x", padding * 3 + boxWidth * 2 + 0.5 * boxWidth)
+                                .attr("y", h + 0.4 * boxSpace);
+                       ppv.append("rect")
+                                .attr("x", padding * 3 + boxWidth * 2)
+                                .attr("y", h + 0.5 * boxSpace)
+                                .attr("width", boxWidth)
+                                .attr("height", boxHeight);
+                       ppv.append("text")
+                                .text(Math.round(truePos / (truePos + falsePos) * 100) + "%")
+                                .attr("x", padding * 3 + boxWidth * 2 + 0.5 * boxWidth)
+                                .attr("y", h + 0.5 * boxSpace + 0.5 * boxHeight)
+                                .attr("class", "stat");
+
+                       var npv = svg.append("g")
+                                    .attr("class", "info");
+                       npv.append("text")
+                          .text("NPV")
+                          .attr("x", padding * 4 + boxWidth * 3 + 0.5 * boxWidth)
+                          .attr("y", h + 0.4 * boxSpace);
+                       npv.append("rect")
+                          .attr("x", padding * 4 + boxWidth * 3)
+                          .attr("y", h + 0.5 * boxSpace)
+                          .attr("width", boxWidth)
+                          .attr("height", boxHeight);
+                       npv.append("text")
+                          .text(Math.round(trueNeg / (trueNeg + falseNeg) * 100) + "%")
+                          .attr("x", padding * 4 + boxWidth * 3 + 0.5 * boxWidth)
+                          .attr("y", h + 0.5 * boxSpace + 0.5 * boxHeight)
+                          .attr("class", "stat");
+
+                      var xROC = d3.scale.linear()  //for the ROC curve
+                                         .domain([0, 1])
+                                         .range([w + 3 * padding, w + graphSpace - padding]);
+                      var yROC = d3.scale.linear()
+                                         .domain([0, 1])
+                                         .range([0.45 * h, buttonHeight + padding]);
+
+                      var xROCAxis = d3.svg.axis()
+                                       .scale(xROC);
+                      var yROCAxis = d3.svg.axis()
+                                       .scale(yROC)
+                                       .orient("left");
+
+                      svg.append("g")
+                         .call(xROCAxis)
+                         .attr("transform", "translate(0, " + (0.45 * h) + ")")
+                         .attr("class", "axis");
+
+                      svg.append("g")
+                         .call(yROCAxis)
+                         .attr("transform", "translate(" + (w + 3 * padding) + ", 0)")
+                         .attr("class", "axis");
+
+                      var interval = 500; //number of thresholds plotted in ROC curve
+
+                      for (var i = 0; i < interval; i++) {
+                         svg.append("line")
+                            .attr("x1", xROC(1 - findSensAndSpec(i / interval)[1]))
+                            .attr("y1", yROC(findSensAndSpec(i / interval)[0]))
+                            .attr("x2", xROC(1 - findSensAndSpec((i + 1) / interval)[1]))
+                            .attr("y2", yROC(findSensAndSpec((i + 1) / interval)[0]))
+                            .style("stroke", "lightgreen")
+                            .attr("class", "rocCurve");
+                      }
+
+                      svg.append("circle")
+                         .attr("cy", yROC(truePos / cancerNumber))
+                         .attr("cx", xROC(falsePos / (people - cancerNumber)))
+                         .attr("r", 7)
+                         .attr("fill", "lightgreen")
+                         .attr("id", "rocMark");
+
+                       svg.append("text")
+                          .text("False Positive Rate")
+                          .attr("x", xROC(0.5))
+                          .attr("y", 0.5 * h)
+                          .attr("font-size", "12px");
+                       svg.append("text")
+                          .text("True Positive Rate")
+                          .attr("transform", "translate(" + (w - padding) + ", " + yROC(0.5) + ")rotate(-90)")
+                          .attr("font-size", "12px");
+
+                       var xRisk = d3.scale.linear()     //for the model comparison
+                                           .domain([0, 1])
+                                           .range([w + 3 * padding, w + graphSpace - padding]);
+                       var model1Diff = d3.scale.linear()
+                                              .domain([-1, 1])
+                                              .range([h, 0.55 * h]);
+
+                       var xRiskAxis = d3.svg.axis()
+                                             .scale(xRisk);
+                       var model1DiffAxis = d3.svg.axis()
+                                                .scale(model1Diff)
+                                                .orient("left");
+
+                       svg.append("g")
+                          .call(xRiskAxis)
+                          .attr("transform", "translate(0, " + (0.775 * h) + ")")
+                          .attr("class", "axis");
+                       svg.append("g")
+                          .call(model1DiffAxis)
+                          .attr("transform", "translate(" + (w + 3 * padding) + ", 0)")
+                          .attr("class", "axis");
+                       for (var i = 0; i < people; i++) {
+                             svg.append("circle")
+                                .attr("cx", xRisk(model1[i][0])) //loving all these brackets!
+                                .attr("cy", model1Diff(model2[i][0] - model1[i][0]))
+                                .attr("r", 3)
+                                .attr("fill", function() {
+                                  if (model1[i][1] == 0) { //cancer vs. healthy coloration
+                                    return "black";
+                                  }
+                                  else {
+                                    return "fuchsia";
+                                  }
+                                });
+                          }
+
+                       svg.append("text")
+                          .text("R1")
+                          .attr("x", xRisk(0.5))
+                          .attr("y", h)
+                          .attr("font-size", "12px");
+                       svg.append("text")
+                          .text("R2 - R1")
+                          .attr("transform", "translate(" + (w - padding) + ", " + model1Diff(0) + ")rotate(-90)")
+                          .attr("font-size", "12px");
+
+                       var legend = svg.append("g"); //an itty bitty legend
+                       legend.append("circle")
+                             .attr("cx", xRisk(0.15))
+                             .attr("cy", h + padding)
+                             .attr("r", 3);
+                       legend.append("text")
+                             .text("D = 0")
+                             .attr("x", xRisk(0.25))
+                             .attr("y", h + padding)
+                             .attr("font-size", "11px");
+                       legend.append("circle")
+                             .attr("cx", xRisk(0.15))
+                             .attr("cy", h + padding * 2)
+                             .attr("r", 3)
+                             .attr("fill", "fuchsia");
+                       legend.append("text")
+                             .text("D = 1")
+                             .attr("x", xRisk(0.25))
+                             .attr("y", h + padding * 2)
+                             .attr("font-size", "11px");
+
+                       var slider = d3.scale.linear() //for the slider
+                                            .domain([0, 1])
+                                            .range([padding, w - padding]);
+                       var sliderOutput = d3.scale.linear() //for interpreting the placement of the
+                                                  .domain([padding, w - padding]) //oval on the slider
+                                                  .range([0, 1]);
+
+                       var sliderAxis = d3.svg.axis()
+                                              .scale(slider);
+
+                       svg.append("g")
+                          .call(sliderAxis)
+                          .attr("transform", "translate(0, " + h + ")")
+                          .attr("class", "axis");
+                       svg.append("text")
+                          .text("Threshold")
+                          .attr("x", slider(0.5))
+                          .attr("y", h + 3 * padding)
+                          .attr("font-size", "12px");
+
+                       var drag = d3.behavior //defining the slider's drag behavior...
+                                    .drag()
+                                    .on("drag", function() {
+                                         slideHandle.attr("cx", function() {
+                                           if (d3.event.x < padding) {
+                                             //prevents oval from going off axis
+                                              return padding;
+                                           }
+                                           else {
+                                              if (d3.event.x > w - padding) {
+                                                 return w - padding;
+                                              }
+                                              else {
+                                                 return d3.event.x;
+                                              }
+                                           }
+                                        })
+                                        var threshold = sliderOutput(slideHandle.attr("cx"));
+                                        //get threshold - this is the reason for the sliderOutput scale
+                                        plot.selectAll("circle")
+                                           .transition()
+                                           .duration(1000)
+                                           .attr("cx", function(d) {
+                                             if (d[1] == 1) {
+                                                 return Math.random() * (w / 4) + (5/8 * w);
+                                              }
+                                              else {
+                                                 return Math.random() * (w / 4) + (w / 8);
+                                              }
+                                           })
+                                           .attr("cy", function(d) {
+                                              if (d[0] < threshold) {
+                                                 return Math.random() * (h / 4) + (5/8 * h);
+                                              }
+                                              else {
+                                                 return Math.random() * (h / 4) + (h / 8);
+                                              }
+                                           })
+
+                                           truePos = 0;
+                                           falseNeg = 0;
+
+                                           plot.selectAll("circle.cancer")
+                                               .filter(".visible")
+                                               .each(function(d) {
+                                                 if (d[0] >= threshold) {
+                                                    truePos++;
+                                                 }
+                                                 else {
+                                                    falseNeg++;
+                                                 }
+                                              });
+
+                                           var falsePos = 0;
+                                           var trueNeg = 0;
+
+                                           plot.selectAll("circle.healthy")
+                                               .filter(".visible")
+                                               .each(function(d) {
+                                                 if (d[0] >= threshold) {
+                                                    falsePos++;
+                                                 }
+                                                 else {
+                                                    trueNeg++;
+                                                 }
+                                               });
+
+                                           sensitivity.select(".stat") //editing data in boxes
+                                                      .text(Math.round(truePos / cancerNumber * 100) + "%");
+
+                                           specificity.select(".stat")
+                                                      .text(Math.round(trueNeg / (people - cancerNumber) * 100) + "%");
+
+                                           ppv.select(".stat")
+                                              .text(Math.round(truePos / (truePos + falsePos) * 100) + "%");
+
+                                           npv.select(".stat")
+                                              .text(Math.round(trueNeg / (trueNeg + falseNeg) * 100) + "%");
+
+                                           svg.select("circle#rocMark") //shift ROC curve marker
+                                              .transition()
+                                              .duration(1000)
+                                              .attr("cy", yROC(truePos / cancerNumber))
+                                              .attr("cx", xROC(falsePos / (people - cancerNumber)));
+                                     });
+                                     
+                         var slideHandle = svg.append("ellipse")
+                                              .attr("cx", slider(standard))
+                                              .attr("cy", h)
+                                              .attr("rx", 8)
+                                              .attr("ry", 10)
+                                              .attr("fill", "pink")
+                                              .attr("id", "oval")
+                                              .call(drag); //...drag behavior is called here!
+
+                         svg.select(".button") //switching between models
+                            .on("click", function() {
+                              svg.select("rect#toggler")
+                                 .transition()
+                                 .duration(1000)
+                                 .attr("x", function() {
+                                    if (d3.select(this).attr("x") == w + padding + 0.5 * buttonWidth) {
+                                       return w + padding;
+                                    }
+                                    else {
+                                       return w + padding + 0.5 * buttonWidth;
+                                    }
+                                 });
+
+                               plot.selectAll("circle.cancer") //the invisible made visible and vice versa
+                                   .attr("class", function() {
+                                     if (d3.select(this).attr("class") == "cancer invisible") {
+                                       return "cancer visible";
+                                     }
+                                     else {
+                                       return "cancer invisible";
+                                     }
+                                  });
+                               plot.selectAll("circle.healthy")
+                                   .attr("class", function() {
+                                     if (d3.select(this).attr("class") == "healthy invisible") {
+                                       return "healthy visible";
+                                     }
+                                     else {
+                                       return "healthy invisible";
+                                     }
+                                   });
+
+                               threshold = sliderOutput(slideHandle.attr("cx")); //get threshold
+
+                               truePos = 0; //recalculate!
+                               falseNeg = 0;
+
+                               plot.selectAll("circle.cancer")
+                                   .filter(".visible")
+                                   .each(function(d) {
+                                      if (d[0] >= threshold) {
+                                         truePos++;
+                                      }
+                                      else {
+                                          falseNeg++;
+                                      }
+                                    });
+
+                               var falsePos = 0;
+                               var trueNeg = 0;
+
+                               plot.selectAll("circle.healthy")
+                                   .filter(".visible")
+                                   .each(function(d) {
+                                       if (d[0] >= threshold) {
+                                          falsePos++;
+                                       }
+                                       else {
+                                           trueNeg++;
+                                       }
+                                   });
+
+                                sensitivity.select(".stat") //edit data
+                                           .text(Math.round(truePos / cancerNumber * 100) + "%");
+
+                                specificity.select(".stat")
+                                           .text(Math.round(trueNeg / (people - cancerNumber) * 100) + "%");
+
+                                ppv.select(".stat")
+                                   .text(Math.round(truePos / (truePos + falsePos) * 100) + "%");
+
+                                npv.select(".stat")
+                                   .text(Math.round(trueNeg / (trueNeg + falseNeg) * 100) + "%");
+
+                                svg.selectAll("line.rocCurve")
+                                   .remove();
+                                for (var i = 0; i < 500; i++) { //new ROC curve
+                                 svg.append("line")
+                                    .attr("x1", xROC(1 - findSensAndSpec(i / 500)[1]))
+                                    .attr("y1", yROC(findSensAndSpec(i / 500)[0]))
+                                    .attr("x2", xROC(1 - findSensAndSpec((i + 1) / 500)[1]))
+                                    .attr("y2", yROC(findSensAndSpec((i + 1) / 500)[0]))
+                                    .style("stroke", "lightgreen")
+                                    .attr("class", "rocCurve");
+                                }
+
+                                svg.select("circle#rocMark")
+                                   .attr("cy", yROC(truePos / cancerNumber))
+                                   .attr("cx", xROC(falsePos / (people - cancerNumber)));
+                            });
+                 });
+      </script>
+   </body>
+</html>
