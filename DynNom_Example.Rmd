@@ -1,0 +1,107 @@
+---
+title: "Dynamic nomograms"
+author: "Marshall Brown and Yingye Zheng"
+date: ""
+output: html_document
+---
+
+```{r,  eval = TRUE, echo = FALSE,  results = 'hide', message = FALSE, warning = FALSE}
+library(rms); library(geepack)
+source("functions.R")
+
+#load libraries here
+library(ggplot2); library(geepack); library(caret)
+library(xtable); library(binom); library(pROC); 
+#library(plyr)
+
+#small functions
+logit <- function(xx) log(xx/(1-xx))
+expit <- function(xx) 1/(1+exp(-xx))
+
+
+source("loadData.R")
+source("buildModels.R")
+```
+
+
+```{r eval = FALSE, echo = FALSE}
+library(DynNom)
+library(parcoords)
+
+dat.train.cc.clin$Gleason.Progression <- as.numeric(dat.train.cc.clin$Gleason.Progression)
+dat.train.cc.mod$Gleason.Progression <- as.numeric(dat.train.cc.mod$Gleason.Progression)
+
+dat.train.cc.mod$nb.2more <- factor(dat.train.cc.mod$nb.2more)
+dat.train.cc.mod$dummyCores <- factor(dat.train.cc.mod$dummyCores)
+
+mod.3c <- glm(Gleason.Progression ~ agePartial4K + 
+                   bmi + 
+                   logVolume + 
+                   dummyCores + nb.2more,
+                 family= binomial("logit"),
+                 data = dat.train.cc.mod)
+
+
+
+mod.2c <- glm(Gleason.Progression ~ AGE + 
+                   bmi + 
+                   dummyCores + nb.2more + 
+                   log.PSAVAL + 
+                   logVolume,
+                 family= binomial("logit"),
+                 data = as.data.frame(dat.train.cc.clin))
+
+
+```
+
+
+```{r echo = FALSE, eval = FALSE}
+#dynamic nomogram 
+DynNom(model = mod.3c, data = as.data.frame(dat.train.cc.mod))
+
+DynNom(model = mod.3c, data = as.data.frame(dat.train.cc.mod))
+
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE, fig.width = 10 }
+#parcoords 
+library(parcoords)
+
+source("loadData.R")
+source("buildModels.R")
+
+#head(dat.valid)
+dat.fig <- dat.train.cc.mod[, c("AGE", "agePartial4K", "PSAVAL",  "bmi", "logVolume", "dummyCores", "prev.biop.max.cores.ratio" ,"nb.2more", "Gleason.Progression")]
+
+dat.fig$risk = predict(mod.3c, newdata = dat.fig, type = "response")
+dat.fig$Volume = exp(dat.fig$logVolume) 
+dat.fig$logVolume <- NULL
+dat.fig$dummyCores <- NULL
+
+dat.fig$nb.2more <- factor(c("no", "yes")[dat.fig$nb.2more+1])
+dat.fig$`Gleason.Progression` <- factor(c("no", "yes")[dat.fig$Gleason.Progression+1])
+names(dat.fig) <- c("Age", "4K score", "PSA", "BMI", "max. cores ratio", "2+ negative biopsies", "Gleason Progression", "risk", "Volume") 
+
+#dat.fig$dummyCores <- factor(dat.fig$dummyCores)
+
+dat.fig <- dat.fig[, c("Age","BMI", "Volume",   "max. cores ratio", "2+ negative biopsies", "4K score", "PSA", "risk", "Gleason Progression")]
+
+dat.fig$`4K score`  <- expit(dat.train.cc.mod$partial.4Kscore)
+
+parcoords(
+  dat.fig
+  , rownames = F # turn off rownames from the data.frame
+  , brushMode = "1D-axes-multi"
+  , reorderable = T
+  , queue = T
+  , alpha = .1
+  , color= list(
+       colorBy="Gleason Progression"
+       ,colorScale = htmlwidgets::JS("d3.scale.category10()")
+     )
+)
+
+
+```
